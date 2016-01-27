@@ -16,7 +16,7 @@ from lxml import html
 from baidupcsapi import PCS
 from baidupcsapi.api import LoginFailed
 from cloudsight import recognize_img
-from const import _CONF_FILE, _LOG_FILE, _CODE_FILE, _SUPPORT_SITES
+from consts import LOG_FILE, CODE_FILE, SUPPORT_SITES
 
 
 # fix problem for pyinstaller
@@ -68,10 +68,10 @@ def _get_pcs(conf):
         if code:
             return code
 
-        with open(_CODE_FILE, 'wb') as f:
+        with open(CODE_FILE, 'wb') as f:
             f.write(img)
 
-        logger.info('Code is saved to %s. Please enter captcha code.' % _CODE_FILE)
+        logger.info('Code is saved to %s. Please enter captcha code.' % CODE_FILE)
         return raw_input('captcha> ')
 
 
@@ -101,7 +101,7 @@ def _get_pcs(conf):
 
 
 def _get_rule(url):
-    for name, value in _SUPPORT_SITES.items():
+    for name, value in SUPPORT_SITES.items():
         if url.startswith(name):
             return value
 
@@ -122,7 +122,7 @@ def download_drama(args):
         # get drama parse rule
         rule = _get_rule(drama_url)
         if not rule:
-            logger.error('Unsupported site: %s.\nSupported sites:%s', drama_url, _SUPPORT_SITES.keys())
+            logger.error('Unsupported site: %s.\nSupported sites:%s', drama_url, SUPPORT_SITES.keys())
             continue
 
         try:
@@ -183,40 +183,16 @@ def _get_history(key):
 
 
 def _save_history():
-    with open(_LOG_FILE, 'wb') as f:
+    with open(LOG_FILE, 'wb') as f:
         pickle.dump(_history, f)
 
 
 def _load_history():
-    if not os.path.exists(_LOG_FILE):
+    if not os.path.exists(LOG_FILE):
         return False
 
     global _history
-    with open(_LOG_FILE, 'rb') as f:
+    with open(LOG_FILE, 'rb') as f:
         _history = pickle.load(f)
 
     return True
-
-
-def _parse_args():
-    parser = argparse.ArgumentParser(description="Drama downloader")
-
-    parser.add_argument('-d', dest='daemon', action='store_true', help='Daemon mode.')
-    parser.add_argument('-c', dest='config', default=_CONF_FILE, help="Config file. Default is %s" % _CONF_FILE)
-
-    return parser.parse_args()
-
-
-_schedule = sched.scheduler(time.time, time.sleep)
-
-
-if __name__ == '__main__':
-    args = _parse_args()
-
-    if not args.daemon:
-        download_drama(args)
-        sys.exit(0)
-
-    logger.info('Drama downloader is running ...')
-    _schedule.enter(1, 0, download_drama, (args, ))
-    _schedule.run()
